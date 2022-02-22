@@ -1,5 +1,111 @@
-#NOTE: THIS BOT IS STILL A WORK IN PROGRESS!
+import discord
+from discord.ext import commands
+import asyncio
 
+bot = commands.Bot(command_prefix='*')
+
+@bot.event
+async def on_ready():
+    print('#Horizon ({0.user}) is active.'.format(bot))
+    await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.playing, name='on #Horizon servers'))
+
+@bot.command()
+async def ping(ctx):
+    embed=discord.Embed(description=f'Pong! My ping is **{round(bot.latency * 1000)}**ms.', color=0xABCDEF)
+    await ctx.reply(embed=embed)
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def embed(ctx, *, message):
+    embed=discord.Embed(description=message, color=0xABCDEF)
+    await ctx.message.delete()
+    await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(kick_members=True)
+async def kick(ctx, user : discord.Member, *, reason=None):
+    if reason == None:
+        embed=discord.Embed(description=f'**{user.mention}** has been *kicked* from the server.', color=0xABCDEF)
+        dmEmbed=discord.Embed(description=f'You have been *kicked* from **#Horizon**.', color=0xABCDEF)
+        await ctx.send(embed=embed)
+        await user.send(embed=dmEmbed)
+    else:
+        embed=discord.Embed(description=f'**{user.mention}** has been *kicked* from the server for __{reason}__.', color=0xABCDEF)
+        dmEmbed=discord.Embed(description=f'You have been *kicked* from **#Horizon** for __{reason}__.', color=0xABCDEF)
+        await ctx.send(embed=embed)
+        await user.send(embed=dmEmbed)
+    await user.kick(reason=reason)
+
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member : discord.Member, *, reason=None):
+    if reason == None:
+        embed=discord.Embed(description=f'{member.mention} has been *banned* from the server.', color=0xABCDEF)
+        dmEmbed=discord.Embed(description=f'You have been *banned* from **#Horizon**.', color=0xABCDEF)
+        await member.send(embed=dmEmbed)
+        await ctx.send(embed=embed)
+    else:
+        embed=discord.Embed(description=f'{member.mention} has been *banned* from the server for __{reason}__.', color=0xABCDEF)
+        dmEmbed=discord.Embed(description=f'You have been *banned* from **#Horizon** for __{reason}__.', color=0xABCDEF)
+        await ctx.send(embed=embed)
+        await member.send(embed=dmEmbed)
+    await member.ban(reason=reason)
+
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def unban(ctx, *, member):
+    embed=discord.Embed(description=f'**{member}** has been *unbanned* from the server.', color=0xABCDEF)
+    banned_users = await ctx.guild.bans()
+    member_name, member_discriminator = member.split('#')
+
+    for ban_entry in banned_users:
+        user = ban_entry.user
+
+        if(user.name, user.discriminator) == (member_name, member_discriminator):
+            await ctx.guild.unban(user)
+            await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def warn(ctx, user : discord.Member, *, reason=None):
+    if reason == None:
+        embed=discord.Embed(description=f'{user.mention} has been *warned*.', color=0xABCDEF)
+        dmEmbed=discord.Embed(description=f'You have been warned on **#Horizon**.', color=0xABCDEF)
+        await ctx.send(embed=embed)
+        await user.send(embed=dmEmbed)
+    else:
+        embed=discord.Embed(description=f'{user.mention} has been *warned* for __{reason}__.', color=0xABCDEF)
+        dmEmbed=discord.Embed(description=f'You have been warned on **#Horizon** for __{reason}__.', color=0xABCDEF)
+        await ctx.send(embed=embed)
+        await user.send(embed=dmEmbed)
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def mute(ctx, member : discord.Member):
+    MutedRole=discord.utils.get(ctx.guild.roles, name='Muted')
+    if not MutedRole:
+        MutedRole = await ctx.guild.create_role(name='Muted')
+        for channel in ctx.guild.channels:
+            await channel.set_permissions(MutedRole, speak=False, send_messages=False, read_message_history=True)
+    embed=discord.Embed(description=f'{member.mention} was *muted*.', color=0xABCDEF)
+    dmEmbed=discord.Embed(description=f'You were *muted* on **#Horizon**.', color=0xABCDEF)
+    await member.add_roles(MutedRole)
+    await ctx.send(embed=embed)
+    await member.send(embed=dmEmbed)
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def unmute(ctx, member : discord.Member):
+    MutedRole = discord.utils.get(ctx.guild.roles, name='Muted')
+    embed1=discord.Embed(description=f'{member.mention} has been **unmuted** from the server.', color=0xABCDEF)
+    embed2=discord.Embed(description=f'You have been **unmuted** from **#Horizon**.', color=0xABCDEF)
+    await member.remove_roles(MutedRole)
+    await ctx.send(embed=embed1)
+    await member.send(embed=embed2)
+
+@bot.command(aliases = ['purge', 'clean'])
+@commands.has_permissions(manage_messages=True)
+async def clear(ctx, amount : int = 999999999):
 import discord
 from discord.ext import commands
 import asyncio
@@ -154,7 +260,7 @@ async def avatar(ctx, user : discord.Member = None):
         await ctx.reply(embed=embed)
 
 @bot.command(aliases=['dm'])
-@commands.has_permissions(administrator=True)
+@commands.has_any_role(763773648662167642)
 async def directmessage(ctx, recipient : discord.Member, *, message):
     if ctx.author.guild.id == recipient.guild.id:
         embed = discord.Embed(description=message, color=0xABCDEF)
@@ -163,5 +269,28 @@ async def directmessage(ctx, recipient : discord.Member, *, message):
     else:
         embed = discord.Embed(description='That user is not in #Horizon.', color=0xABCDEF)
         ctx.send(embed=embed)
+
+@bot.command(aliases=['announce', 'broadcast', 'bc'])
+@commands.has_any_role(763773648662167642)
+async def announcement(ctx, *, announcement):
+    await ctx.message.delete()
+    await ctx.send(f'{announcement}\n \n@everyone')
+
+@bot.event
+async def on_command_error(ctx, error):
+	if isinstance(error, commands.CommandOnCooldown):
+		await ctx.send(f'You can use that again in **{round(error.retry_after, 2)}** seconds.')
+@bot.event
+async def on_command_error(ctx, error):
+	if isinstance(error, commands.MissingPermissions):
+		await ctx.send('You do not have permission to do that.')
+@bot.event
+async def on_command_error(ctx, error):
+	if isinstance(error, commands.MissingRequiredArgument):
+		await ctx.send(f'You are missing the argument **{error.param}**')
+@bot.event
+async def on_command_error(ctx, error):
+	if isinstance(error, commands.CommandNotFound):
+		await ctx.send(f'That command does not exsist.')
 
 bot.run('TOKEN')
