@@ -1,4 +1,3 @@
-from audioop import add
 import discord
 from discord.ext import commands
 import asyncio
